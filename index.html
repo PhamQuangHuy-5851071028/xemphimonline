@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <!-- Tự động gửi Origin hợp lệ từ GitHub Pages để tránh lỗi Cloudflare Block -->
+    <meta name="referrer" content="origin">
+    <title>Rạp Phim Cá Nhân - 47 Tập</title>
+    <style>
+        :root {
+            --bg-main: #0f172a;
+            --bg-card: #1e293b;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent: #3b82f6;
+            --accent-hover: #2563eb;
+            --active-ep: #10b981;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            padding: 12px;
+            line-height: 1.5;
+        }
+        .container { max-width: 1060px; margin: 0 auto; }
+
+        .player-wrapper {
+            position: relative;
+            padding-bottom: 56.25%;
+            height: 0;
+            background: #000;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.6);
+            margin-bottom: 14px;
+        }
+        .player-wrapper iframe {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%; border: none;
+        }
+
+        .controls-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--bg-card);
+            padding: 12px 16px;
+            border-radius: 10px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .current-title { font-size: 1.05rem; font-weight: 700; color: var(--active-ep); }
+        .nav-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
+        .btn {
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.85rem;
+            text-decoration: none;
+            transition: background 0.2s;
+        }
+        .btn:hover:not(:disabled) { background: var(--accent-hover); }
+        .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+        .btn-outline {
+            background: #334155;
+            color: var(--text-main);
+        }
+
+        .section-box {
+            background: var(--bg-card);
+            padding: 16px;
+            border-radius: 10px;
+            margin-bottom: 16px;
+        }
+        .section-title {
+            font-size: 0.88rem; font-weight: 600; margin-bottom: 12px;
+            color: var(--text-muted); text-transform: uppercase;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .ep-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(58px, 1fr));
+            gap: 8px;
+            max-height: 260px;
+            overflow-y: auto;
+        }
+        .ep-btn {
+            background: #334155; color: var(--text-main);
+            border: 1px solid transparent; padding: 10px 4px;
+            border-radius: 6px; cursor: pointer; font-weight: 600;
+            font-size: 0.9rem;
+        }
+        .ep-btn:hover { background: #475569; }
+        .ep-btn.watched { color: var(--text-muted); background: #1e293b; border-color: #334155; }
+        .ep-btn.active { background: var(--active-ep); color: #052e16; font-weight: 700; }
+
+        details summary {
+            cursor: pointer;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+        textarea {
+            width: 100%; height: 120px; margin: 10px 0;
+            background: var(--bg-main); color: #fff;
+            border: 1px solid #334155; border-radius: 8px;
+            padding: 10px; font-family: monospace; font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="player-wrapper">
+        <iframe id="videoPlayer" src="" allowfullscreen referrerpolicy="origin" allow="autoplay; fullscreen; encrypted-media"></iframe>
+    </div>
+
+    <div class="controls-bar">
+        <div class="current-title" id="epTitle">Đang tải...</div>
+        <div class="nav-buttons">
+            <button class="btn" id="prevBtn" onclick="changeEp(-1)">&#8592; Tập trước</button>
+            <button class="btn" id="nextBtn" onclick="changeEp(1)">Tập tiếp &#8594;</button>
+            <a id="openTabBtn" href="#" target="_blank" rel="opener" class="btn btn-outline">&#8599; Mở Tab Rời</a>
+        </div>
+    </div>
+
+    <div class="section-box">
+        <div class="section-title">
+            <span>Danh sách tập (<span id="epCount">47</span>)</span>
+        </div>
+        <div class="ep-grid" id="epGrid"></div>
+    </div>
+
+    <div class="section-box">
+        <details>
+            <summary>&#9881; Đổi danh sách link phim mới (Lưu ngay trên thiết bị này)</summary>
+            <textarea id="customLinksInput"></textarea>
+            <div style="display:flex; gap:8px;">
+                <button class="btn" onclick="saveCustomLinks()">Lưu & Phát Danh Sách Mới</button>
+                <button class="btn btn-outline" onclick="resetDefaultLinks()">Khôi phục 47 tập gốc</button>
+            </div>
+        </details>
+    </div>
+</div>
+
+<script>
+const defaultRawLinks = `1|https://embed13.streamc.xyz/embed.php?hash=a23d5dd45108ea7610f7c9e76206723c
+2|https://embed13.streamc.xyz/embed.php?hash=d4f3d1dbd0520c526e40269b8f3022bd
+3|https://embed13.streamc.xyz/embed.php?hash=72a3cecd56e4e321aa279d55165b7057
+4|https://embed11.streamc.xyz/embed.php?hash=1e6af36ceda0cf4c990e773b2eada23c
+5|https://embed11.streamc.xyz/embed.php?hash=cc69036929f30955cf0740464d328f88
+6|https://embed12.streamc.xyz/embed.php?hash=14cc8f0ad95f7bd25aaa99d10e6cef25
+7|https://embed13.streamc.xyz/embed.php?hash=0fd818d3dc190f5932666818a1204f25
+8|https://embed13.streamc.xyz/embed.php?hash=329e653c4f14158c1a966e60d7181e23
+9|https://embed12.streamc.xyz/embed.php?hash=8e7799fb2524a0fb78cacb82e79b702b
+10|https://embed12.streamc.xyz/embed.php?hash=ee18848d86b70585836652407f602048
+11|https://embed11.streamc.xyz/embed.php?hash=6d2e2079e19ebe885abcbbfd14eaa9bb
+12|https://embed18.streamc.xyz/embed.php?hash=2320b689a9efdb5e4f87754ed0cad328
+13|https://embed11.streamc.xyz/embed.php?hash=645c3f6c63e3e643116dc2a026e38d3a
+14|https://embed14.streamc.xyz/embed.php?hash=ec9b344d79fbd035b908fcb4dc0da10e
+15|https://embed11.streamc.xyz/embed.php?hash=85cbb344b313da9eada7f2742c5a0cb1
+16|https://embed18.streamc.xyz/embed.php?hash=5d1227544561384fba15251833d43f16
+17|https://embed13.streamc.xyz/embed.php?hash=c8dc5d3da897e744fd5929aa39465f13
+18|https://embed14.streamc.xyz/embed.php?hash=415d9087c01bf9486f57fe209c16e5af
+19|https://embed12.streamc.xyz/embed.php?hash=f36ef89207d50b930598c6c5d464d7a8
+20|https://embed11.streamc.xyz/embed.php?hash=fe2b998d6deadf54014f4d2ad3d1bb7d
+21|https://embed12.streamc.xyz/embed.php?hash=2e8e0d8f3bf79d2bf91491c08f72b8f1
+22|https://embed12.streamc.xyz/embed.php?hash=6e4819d74eb090f97d4520f628acd0d5
+23|https://embed12.streamc.xyz/embed.php?hash=7bf07202bdb4b35e7c9d57f598caded5
+24|https://embed11.streamc.xyz/embed.php?hash=57a69541ef8d26f6e56936091ba02d65
+25|https://embed11.streamc.xyz/embed.php?hash=e3edc640d71e19ef22bc64c7358fb743
+26|https://embed13.streamc.xyz/embed.php?hash=4707177019b1bc0551a7ebef1f163042
+27|https://embed13.streamc.xyz/embed.php?hash=70e0a4b0415eec2dba47faa71ae05919
+28|https://embed11.streamc.xyz/embed.php?hash=d0970962d1245ffb6055d8557acda1dc
+29|https://embed12.streamc.xyz/embed.php?hash=cd206c7320a745acd999dfc415820ad3
+30|https://embed12.streamc.xyz/embed.php?hash=bdd89dde70041a82a0b91b4fbf94ad13
+31|https://embed12.streamc.xyz/embed.php?hash=a5bb50a042bfaa08f843000306f7a47c
+32|https://embed13.streamc.xyz/embed.php?hash=62a96f907898a6f94c23c76ba20adf4e
+33|https://embed11.streamc.xyz/embed.php?hash=bf85c7794569bf674d6e050abfcd8024
+34|https://embed13.streamc.xyz/embed.php?hash=4961fbf0b73144ed6c34be38ec4ad786
+35|https://embed12.streamc.xyz/embed.php?hash=1cdf917a5bf75d3bd5cb2534426696fd
+36|https://embed14.streamc.xyz/embed.php?hash=965d36edbaf3a3dc70d8836f30b8a7a9
+37|https://embed11.streamc.xyz/embed.php?hash=77483e5e9cb3f147f4f3a7ee37df592f
+38|https://embed12.streamc.xyz/embed.php?hash=360b2adc5c35af348341f77926adebf8
+39|https://embed11.streamc.xyz/embed.php?hash=557e2033f4ab464aa946029c968c37b9
+40|https://embed11.streamc.xyz/embed.php?hash=b5168b95a0b47293fa166720703b3d7c
+41|https://embed11.streamc.xyz/embed.php?hash=be737b5d494a745dab56095a2e4cab5d
+42|https://embed11.streamc.xyz/embed.php?hash=5ee8e296217c546bcf0760f1891a87dc
+43|https://embed13.streamc.xyz/embed.php?hash=370af6c6dabbd87a98231b8e69b0c555
+44|https://embed2.streamc.xyz/embed.php?hash=04928097b085db4eb98a5191b28568c8
+45|https://embed13.streamc.xyz/embed.php?hash=4e13c656ee71a8195bf2ff34d05eea00
+46|https://embed18.streamc.xyz/embed.php?hash=28b4de6d0fe6b37748ebd13d32248ac5
+47|https://embed2.streamc.xyz/embed.php?hash=02173cb670f1209d5afca54bc0ee4228`;
+
+function parseRaw(text) {
+    return text.trim().split('\n').map(l => {
+        const p = l.split('|');
+        return p.length >= 2 ? { ep: p[0].trim(), url: p[1].trim() } : null;
+    }).filter(Boolean);
+}
+
+let activeRaw = localStorage.getItem('custom_raw_links') || defaultRawLinks;
+let episodes = parseRaw(activeRaw);
+let currentIndex = 0;
+let watchedHistory = JSON.parse(localStorage.getItem('watched_eps') || '[]');
+
+document.getElementById('customLinksInput').value = activeRaw;
+
+function loadEpisode(index) {
+    if (index < 0 || index >= episodes.length) return;
+    currentIndex = index;
+    const item = episodes[currentIndex];
+
+    document.getElementById('videoPlayer').src = item.url;
+    document.getElementById('openTabBtn').href = item.url;
+    document.getElementById('epTitle').textContent = `Đang phát: Tập ${item.ep}`;
+    document.getElementById('prevBtn').disabled = (currentIndex === 0);
+    document.getElementById('nextBtn').disabled = (currentIndex === episodes.length - 1);
+
+    if (!watchedHistory.includes(item.url)) {
+        watchedHistory.push(item.url);
+        localStorage.setItem('watched_eps', JSON.stringify(watchedHistory));
+    }
+    localStorage.setItem('last_ep_index', currentIndex);
+    renderGrid();
+}
+
+function renderGrid() {
+    const grid = document.getElementById('epGrid');
+    document.getElementById('epCount').textContent = episodes.length;
+    grid.innerHTML = '';
+    episodes.forEach((item, index) => {
+        const btn = document.createElement('button');
+        btn.className = 'ep-btn';
+        if (watchedHistory.includes(item.url)) btn.classList.add('watched');
+        if (index === currentIndex) btn.classList.add('active');
+        btn.textContent = item.ep;
+        btn.onclick = () => loadEpisode(index);
+        grid.appendChild(btn);
+    });
+}
+
+function changeEp(step) { loadEpisode(currentIndex + step); }
+
+function saveCustomLinks() {
+    const val = document.getElementById('customLinksInput').value;
+    const parsed = parseRaw(val);
+    if (parsed.length > 0) {
+        localStorage.setItem('custom_raw_links', val);
+        episodes = parsed;
+        loadEpisode(0);
+    }
+}
+
+function resetDefaultLinks() {
+    localStorage.removeItem('custom_raw_links');
+    document.getElementById('customLinksInput').value = defaultRawLinks;
+    episodes = parseRaw(defaultRawLinks);
+    loadEpisode(0);
+}
+
+const savedIndex = parseInt(localStorage.getItem('last_ep_index'), 10);
+loadEpisode(!isNaN(savedIndex) && savedIndex < episodes.length ? savedIndex : 0);
+</script>
+</body>
+</html>
