@@ -141,6 +141,11 @@
     <div class="section-box">
         <details>
             <summary>&#9881; Đổi danh sách link phim mới (Lưu ngay trên thiết bị này)</summary>
+            <div style="display:flex; gap:8px; margin-top:10px;">
+                <input id="currentLinkInput" type="url" placeholder="Dán embed link cho tập đang chọn"
+                    style="flex:1; min-width:0; background:var(--bg-main); color:#fff; border:1px solid #334155; border-radius:8px; padding:10px;">
+                <button class="btn" onclick="updateCurrentLink()">Đổi link tập này</button>
+            </div>
             <textarea id="customLinksInput"></textarea>
             <div style="display:flex; gap:8px;">
                 <button class="btn" onclick="saveCustomLinks()">Lưu & Phát Danh Sách Mới</button>
@@ -220,6 +225,7 @@ function loadEpisode(index) {
 
     document.getElementById('videoPlayer').src = item.url;
     document.getElementById('openTabBtn').href = item.url;
+    document.getElementById('currentLinkInput').value = item.url;
     document.getElementById('epTitle').textContent = `Đang phát: Tập ${item.ep}`;
     document.getElementById('prevBtn').disabled = (currentIndex === 0);
     document.getElementById('nextBtn').disabled = (currentIndex === episodes.length - 1);
@@ -248,6 +254,32 @@ function renderGrid() {
 }
 
 function changeEp(step) { loadEpisode(currentIndex + step); }
+
+function updateCurrentLink() {
+    const input = document.getElementById('currentLinkInput');
+    const newUrl = input.value.trim();
+
+    if (!newUrl) {
+        input.focus();
+        return;
+    }
+
+    try {
+        const parsedUrl = new URL(newUrl);
+        if (!['http:', 'https:'].includes(parsedUrl.protocol)) throw new Error();
+    } catch {
+        alert('Embed link không hợp lệ. Vui lòng nhập URL bắt đầu bằng http:// hoặc https://');
+        input.focus();
+        return;
+    }
+
+    episodes[currentIndex].url = newUrl;
+    watchedHistory = watchedHistory.filter(url => url !== newUrl);
+    const updatedRaw = episodes.map(item => `${item.ep}|${item.url}`).join('\n');
+    localStorage.setItem('custom_raw_links', updatedRaw);
+    document.getElementById('customLinksInput').value = updatedRaw;
+    loadEpisode(currentIndex);
+}
 
 function saveCustomLinks() {
     const val = document.getElementById('customLinksInput').value;
